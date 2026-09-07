@@ -6,24 +6,24 @@ def main():
     counter = LineCounter(
         line_start=(220, 420),
         line_end=(1080, 420),
-        direction="top_to_bottom"
+        direction="top_to_bottom",
+        zone=10
     )
 
-    # Vehicle starts above the line
+    # Vehicle starts clearly above the line
     print(counter.update(1, (500, 350)))
 
-    # Vehicle moves closer
+    # Vehicle still above the line
     print(counter.update(1, (500, 390)))
 
-    # Vehicle crosses the line
-    print(counter.update(1, (500, 430)))
+    # Vehicle enters the crossing zone
+    print(counter.update(1, (500, 415)))
 
-    # Vehicle continues below the line
-    print(counter.update(1, (500, 470)))
-
-    # Same vehicle should NOT be counted again
-    print(counter.update(1, (500, 410)))
+    # Vehicle clearly moves below the line
     print(counter.update(1, (500, 450)))
+
+    # Same vehicle must not be counted again
+    print(counter.update(1, (500, 470)))
 
     print()
     print("Final Count:", counter.count)
