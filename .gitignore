@@ -1,0 +1,19 @@
+# Python virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Generated outputs
+outputs/
+runs/
+
+# Environment variables / secrets
+.env
+
+# Model weights
+*.pt
+
+# Challenge dataset
+video/
