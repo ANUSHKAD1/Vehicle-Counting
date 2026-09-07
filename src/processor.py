@@ -2,6 +2,7 @@ import cv2
 
 from src.tracker import VehicleTracker
 from src.counter import LineCounter
+from src.logger import EventLogger
 
 
 VIDEO_PATH = "video/cars.mp4"
@@ -20,10 +21,16 @@ def process_video(video_path):
         direction="top_to_bottom"
     )
 
+    logger = EventLogger(
+        "outputs/logs/events.csv"
+    )
+
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
-        raise ValueError(f"Could not open video: {video_path}")
+        raise ValueError(
+            f"Could not open video: {video_path}"
+        )
 
     fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -51,7 +58,10 @@ def process_video(video_path):
 
         for track in tracks:
 
-            x1, y1, x2, y2 = map(int, track["bbox"])
+            x1, y1, x2, y2 = map(
+                int,
+                track["bbox"]
+            )
 
             track_id = track["track_id"]
             class_name = track["class_name"]
@@ -84,8 +94,12 @@ def process_video(video_path):
                 -1
             )
 
-            # Label
-            label = f"{class_name} ID:{track_id}"
+            # Vehicle label
+            label = (
+                f"{class_name} "
+                f"ID:{track_id} "
+                f"{confidence:.2f}"
+            )
 
             cv2.putText(
                 frame,
@@ -97,7 +111,7 @@ def process_video(video_path):
                 2
             )
 
-            # Show crossing alert
+            # Vehicle crossed the line
             if crossed:
 
                 timestamp = frame_number / fps
@@ -107,6 +121,15 @@ def process_video(video_path):
                     f"Time: {timestamp:.2f}s | "
                     f"Class: {class_name} | "
                     f"Track ID: {track_id}"
+                )
+
+                logger.log_event(
+                    video_name="cars.mp4",
+                    timestamp_seconds=timestamp,
+                    event_type="vehicle_crossing",
+                    vehicle_class=class_name,
+                    track_id=track_id,
+                    direction="top_to_bottom"
                 )
 
                 cv2.putText(
@@ -138,13 +161,20 @@ def process_video(video_path):
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
+    # Release video resources
     cap.release()
     cv2.destroyAllWindows()
+
+    # Save all crossing events
+    logger.save()
 
     print()
     print("Processing completed")
     print("-------------------")
-    print(f"Total vehicles counted: {counter.count}")
+    print(
+        f"Total vehicles counted: "
+        f"{counter.count}"
+    )
 
 
 if __name__ == "__main__":
