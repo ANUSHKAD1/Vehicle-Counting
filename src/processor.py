@@ -1,3 +1,5 @@
+import subprocess
+import imageio_ffmpeg
 import cv2
 import os
 
@@ -6,14 +8,14 @@ from src.counter import LineCounter
 from src.logger import EventLogger
 
 VIDEO_PATH = "video/cars.mp4"
+TEMP_VIDEO_PATH = "outputs/videos/cars_annotated_temp.mp4"
 OUTPUT_VIDEO_PATH = "outputs/videos/cars_annotated.mp4"
 
 LINE_START = (220, 420)
 LINE_END = (1080, 420)
 
 
-def process_video(video_path):
-
+def process_video(video_path, show_window=True, progress_callback=None):
     tracker = VehicleTracker()
 
     counter = LineCounter(
@@ -30,13 +32,14 @@ def process_video(video_path):
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     os.makedirs("outputs/videos", exist_ok=True)
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 
     writer = cv2.VideoWriter(
-        OUTPUT_VIDEO_PATH,
+        TEMP_VIDEO_PATH,
         fourcc,
         fps,
         (width, height)
@@ -57,6 +60,9 @@ def process_video(video_path):
             break
 
         frame_number += 1
+        if progress_callback:
+            progress = frame_number / total_frames
+            progress_callback(progress, frame_number, total_frames, counter.count)
 
         tracks = tracker.track(frame)
 
@@ -139,14 +145,35 @@ def process_video(video_path):
         )
         
         writer.write(frame)
-        cv2.imshow("Vehicle Counting", frame)
+        if show_window:
+            cv2.imshow("Vehicle Counting", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
     # Release video resources
     cap.release()
     writer.release()
+    # Convert the OpenCV video to H.264 for browser playback
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+
+    subprocess.run(
+        [
+            ffmpeg_path,
+            "-y",
+            "-i",
+            TEMP_VIDEO_PATH,
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            OUTPUT_VIDEO_PATH
+        ],
+        check=True
+    )
+
+    # Remove temporary video
+    os.remove(TEMP_VIDEO_PATH)
     cv2.destroyAllWindows()
 
     # Save all crossing events
@@ -156,6 +183,7 @@ def process_video(video_path):
     print("Processing completed")
     print("-------------------")
     print(f"Total vehicles counted: " f"{counter.count}")
+    return counter.count
 
 
 if __name__ == "__main__":
