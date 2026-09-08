@@ -1,0 +1,10 @@
+venv/
+.git/
+.gitignore
+outputs/
+runs/
+video/
+*.pt
+__pycache__/
+*.pyc
+.env
